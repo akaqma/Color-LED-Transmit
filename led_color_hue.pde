@@ -32,14 +32,14 @@ const int silent_cycle = 5; // 消灯時間 [cycle]
 
 LED led_1 = { 
 	{ 9, 10, 11 },
-	{ 0, 0, 0, 0, 1, 1, 1, 1 },
+	{ 0, 0, 0, 1, 0, 0, 1, 1 },
 	0,
 	0,
 };
 
 LED led_2 = { 
 	{ 2, 3, 4 },
-	{ 0, 0, 0, 0, 1, 1, 1, 0 },
+	{ 0, 0, 0, 1, 1, 0, 1, 0 },
 	0,
 	0,
 };
@@ -90,6 +90,7 @@ void loop()
 void led_transmit() {
 	if(modeHue) {
 		led_print(led_1.pin, led_1.data, &led_1.count, &led_1.hue);	
+		led_print(led_2.pin, led_2.data, &led_2.count, &led_2.hue);	
 	}
 	else {
 		rgb_flash(led_1.pin, led_1.data, &led_1.count);
@@ -107,18 +108,21 @@ void led_print(const int rgb[], const int data[], int *count, int *hue)
 	int max_size = data_size + silent_cycle;	// 消灯時間も含めたデータセット長
 
 	if(t_cnt >= max_size) t_cnt = 0;
-	if(t_hue >= max_degree) t_hue = 0;
 
 	// データ通信中
 	if(t_cnt < data_size) {
+		/*
 		if(data[t_cnt] == 1) {
 			t_hue += degree_1;
-			hue_set(rgb, t_hue, true);
-		}
-		else {
 			t_hue += degree_0;
-			hue_set(rgb, t_hue, true);
 		}
+		*/
+
+		t_hue += (data[t_cnt]==1) ? degree_1 : degree_0;
+		if(t_hue >= max_degree) {
+			t_hue = t_hue - max_degree;
+		}
+		hue_set(rgb, t_hue, true);
 	}
 	// 消灯中
 	else {
@@ -176,10 +180,17 @@ void hue_set(const int RGB[], int Hue, bool illuminate)
 	if(illuminate) {
 		if (Hue == 120) {
  			G_Color = 255; 
-		} else if (Hue == 240) {
+		} 
+		else if (Hue == 240) {
  			B_Color = 255; 
-		} else {
+		} 
+		else if (Hue == 0) {
  			R_Color = 255; 
+		}
+		else {
+			R_Color = 255;
+			G_Color = 255;
+			B_Color = 255;
 		}
 	}
 
