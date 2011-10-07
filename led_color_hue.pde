@@ -25,9 +25,9 @@ typedef struct _LED {
 //---------------------------------------
 //  設定パラメータ
 //---------------------------------------
-const int modeHue = 0;	// 色相変化か点滅によるRGB変化か
+const int modeHue = 1;	// 色相変化か点滅によるRGB変化か
 const int cycle_time = 1000; // 周期時間 [ms]
-const int silent_cycle = 15; // 消灯時間 [cycle]
+const int silent_cycle = 5; // 消灯時間 [cycle]
 
 LED led_1 = { 
 	{ 9, 10, 11 },
