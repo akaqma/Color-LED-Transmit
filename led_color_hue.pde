@@ -7,11 +7,14 @@ Arduino フルカラーLEDの点滅制御ソース
 http://www.geocities.jp/zattouka/GarageHouse/micon/Arduino/RGBLED/RGBLED1.htm
 
 		Auther:Takayuki Akaguma
-		Last Update: 2011/10/6
+		Last Update: 2011/10/7
 */
 
 #include <MsTimer2.h>
 #include <WString.h>
+
+// 回路の動作確認用
+#define CHK_KAIRO 0
 
 // 個々のLEDのデータを保持
 const int data_size = 8;
@@ -26,9 +29,8 @@ typedef struct _LED {
 //---------------------------------------
 //  設定パラメータ
 //---------------------------------------
-const int modeHue = 1;	// 色相変化か点滅によるRGB変化か
-const int cycle_time = 1000; // 周期時間 [ms]
-const int silent_cycle = 5; // 消灯時間 [cycle]
+const int cycle_time = 500; 	// 周期時間 [ms]
+const int silent_cycle = 5; 	// 消灯時間 [cycle]
 
 LED led_1 = { 
 	{ 9, 10, 11 },
@@ -50,10 +52,21 @@ enum _RGB {
 	nB
 };
 
-// 0bit, 1bit の時に移動する色相差
+
+//---------------------------------------
+//  定数
+//---------------------------------------
+// 0,1の時に移動する色相差
 const int degree_0 = 120;
 const int degree_1 = 240;
 const int max_degree = 360;
+
+const int LED_ON = 255;
+const int LED_OFF = 0;
+
+const int GREEN	= 120;
+const int BLUE 	= 240;
+const int RED 	= 0;
 
 
 //---------------------------------------
@@ -63,12 +76,9 @@ void setup() {
 
 	Serial.begin(9600);
 
-	if(modeHue) {
-		;
-	}
-	else {
-		rgb_setup(led_1.pin);
-	}
+#if CHK_KAIRO
+	rgb_setup(led_1.pin);
+#endif
 
 	MsTimer2::set(cycle_time, led_transmit);
 	MsTimer2::start();
@@ -88,13 +98,14 @@ void loop()
 //	割り込み処理
 //---------------------------------------
 void led_transmit() {
-	if(modeHue) {
-		led_print(led_1.pin, led_1.data, &led_1.count, &led_1.hue);	
-		led_print(led_2.pin, led_2.data, &led_2.count, &led_2.hue);	
-	}
-	else {
-		rgb_flash(led_1.pin, led_1.data, &led_1.count);
-	}
+
+#if !CHK_KAIRO
+	led_print(led_1.pin, led_1.data, &led_1.count, &led_1.hue);	
+	led_print(led_2.pin, led_2.data, &led_2.count, &led_2.hue);	
+#else
+	rgb_flash(led_1.pin, led_1.data, &led_1.count);
+#endif
+
 }
 
 
@@ -111,12 +122,6 @@ void led_print(const int rgb[], const int data[], int *count, int *hue)
 
 	// データ通信中
 	if(t_cnt < data_size) {
-		/*
-		if(data[t_cnt] == 1) {
-			t_hue += degree_1;
-			t_hue += degree_0;
-		}
-		*/
 
 		t_hue += (data[t_cnt]==1) ? degree_1 : degree_0;
 		if(t_hue >= max_degree) {
@@ -133,6 +138,39 @@ void led_print(const int rgb[], const int data[], int *count, int *hue)
 	++t_cnt;
 	*count = t_cnt;
 	*hue = t_hue;
+}
+
+
+//---------------------------------------
+//	Hueの値を指定して描画する
+//---------------------------------------
+void hue_set(const int RGB[], int Hue, bool illuminate)
+{
+	int R_Color = LED_OFF; 
+	int G_Color = LED_OFF;
+	int B_Color = LED_OFF;
+
+	if(illuminate) {
+		if (Hue == GREEN) {
+ 			G_Color = LED_ON; 
+		} 
+		else if (Hue == BLUE) {
+ 			B_Color = LED_ON; 
+		} 
+		else if (Hue == RED) {
+ 			R_Color = LED_ON; 
+		}
+		// エラーのため異なる色を発光
+		else {
+			R_Color = LED_ON;
+			G_Color = LED_ON;
+			B_Color = LED_ON;
+		}
+	}
+
+	analogWrite(RGB[nR],R_Color) ;
+	analogWrite(RGB[nG],G_Color) ;
+	analogWrite(RGB[nB],B_Color) ;
 }
 
 
@@ -168,38 +206,8 @@ void hue_paint(const int RGB[], int Hue)
 }
 #endif
 
-//---------------------------------------
-//	Hueの値を指定して描画する
-//---------------------------------------
-void hue_set(const int RGB[], int Hue, bool illuminate)
-{
-	int R_Color = 0; 
-	int G_Color = 0;
-	int B_Color = 0;
 
-	if(illuminate) {
-		if (Hue == 120) {
- 			G_Color = 255; 
-		} 
-		else if (Hue == 240) {
- 			B_Color = 255; 
-		} 
-		else if (Hue == 0) {
- 			R_Color = 255; 
-		}
-		else {
-			R_Color = 255;
-			G_Color = 255;
-			B_Color = 255;
-		}
-	}
-
-	/* RGBLEDに出力する処理   */
-	analogWrite(RGB[nR],R_Color) ;               // 赤LEDの出力
-	analogWrite(RGB[nG],G_Color) ;               // 緑LEDの出力
-	analogWrite(RGB[nB],B_Color) ;               // 青LEDの出力
-}
-
+#if CHK_KAIRO
 //---------------------------------------
 //	RGBの点滅
 //---------------------------------------
@@ -213,7 +221,6 @@ void rgb_flash(int rgb[], int data[], int *num)
 	*num = count;
 }
 
-
 //---------------------------------------
 //	デジタル出力の場合の初期設定
 //---------------------------------------
@@ -226,4 +233,4 @@ void rgb_setup(int rgb[])
 	digitalWrite(rgb[nG], LOW);
 	digitalWrite(rgb[nB], LOW);
 }
-
+#endif
