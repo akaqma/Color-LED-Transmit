@@ -14,7 +14,7 @@ http://www.geocities.jp/zattouka/GarageHouse/micon/Arduino/RGBLED/RGBLED1.htm
 #include <WString.h>
 
 // 回路の動作確認用
-#define CHK_KAIRO 0
+#define DBG_LED 0
 
 // 個々のLEDのデータを保持
 const int data_size = 8;
@@ -29,8 +29,9 @@ typedef struct _LED {
 //---------------------------------------
 //  設定パラメータ
 //---------------------------------------
-const int cycle_time = 500; 	// 周期時間 [ms]
-const int silent_cycle = 5; 	// 消灯時間 [cycle]
+const double frame_rate = 5.0;
+const int cycle_time = 1000/frame_rate; 	// 周期時間 [ms]
+const int silent_cycle = 2; 	// 消灯時間 [cycle]
 
 LED led_1 = { 
 	{ 9, 10, 11 },
@@ -76,10 +77,6 @@ void setup() {
 
 	Serial.begin(9600);
 
-#if CHK_KAIRO
-	rgb_setup(led_1.pin);
-#endif
-
 	MsTimer2::set(cycle_time, led_transmit);
 	MsTimer2::start();
 }
@@ -99,12 +96,8 @@ void loop()
 //---------------------------------------
 void led_transmit() {
 
-#if !CHK_KAIRO
 	led_print(led_1.pin, led_1.data, &led_1.count, &led_1.hue);	
 	led_print(led_2.pin, led_2.data, &led_2.count, &led_2.hue);	
-#else
-	rgb_flash(led_1.pin, led_1.data, &led_1.count);
-#endif
 
 }
 
@@ -131,8 +124,9 @@ void led_print(const int rgb[], const int data[], int *count, int *hue)
 	}
 	// 消灯中
 	else {
-		if(t_cnt == data_size) 
+		if(t_cnt == data_size) {
 			t_hue = 0;
+                }
 		hue_set(rgb, NULL, false);
 	}
 	++t_cnt;
@@ -146,6 +140,12 @@ void led_print(const int rgb[], const int data[], int *count, int *hue)
 //---------------------------------------
 void hue_set(const int RGB[], int Hue, bool illuminate)
 {
+#if 0
+	if(illuminate) {
+		hue_paint(RGB, Hue);
+	}
+
+#else
 	int R_Color = LED_OFF; 
 	int G_Color = LED_OFF;
 	int B_Color = LED_OFF;
@@ -171,10 +171,10 @@ void hue_set(const int RGB[], int Hue, bool illuminate)
 	analogWrite(RGB[nR],R_Color) ;
 	analogWrite(RGB[nG],G_Color) ;
 	analogWrite(RGB[nB],B_Color) ;
+#endif
 }
 
 
-#if 0
 //---------------------------------------
 //	Hueの値を指定して描画する(360°対応)
 //---------------------------------------
@@ -204,10 +204,9 @@ void hue_paint(const int RGB[], int Hue)
 	analogWrite(RGB[nG],G_Color) ;               // 緑LEDの出力
 	analogWrite(RGB[nB],B_Color) ;               // 青LEDの出力
 }
-#endif
 
 
-#if CHK_KAIRO
+#if DBG_LED
 //---------------------------------------
 //	RGBの点滅
 //---------------------------------------
